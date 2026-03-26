@@ -2,46 +2,90 @@ import streamlit as st
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.express as px
+import pandas as pd
 
 # Load model
 model = pickle.load(open("model.pkl", "rb"))
 
+st.set_page_config(page_title="Flood Prediction", layout="wide")
+
 st.title("🌊 Flood Impact Prediction System")
+st.markdown("### Advanced Disaster Prediction Dashboard")
 
-st.write("Enter environmental details:")
+# 🔹 Sidebar Inputs
+st.sidebar.header("Enter Input Values")
 
-# Inputs
-latitude = st.number_input("Latitude")
-longitude = st.number_input("Longitude")
-total_deaths = st.number_input("Total Deaths")
-total_affected = st.number_input("Total Affected")
-duration = st.number_input("Duration")
-time = st.number_input("Time")
-rainfall = st.number_input("Rainfall")
-elevation = st.number_input("Elevation")
-slope = st.number_input("Slope")
-distance = st.number_input("Distance")
+latitude = st.sidebar.slider("Latitude", -90.0, 90.0, 13.0)
+longitude = st.sidebar.slider("Longitude", -180.0, 180.0, 80.0)
+total_deaths = st.sidebar.slider("Total Deaths", 0, 500, 10)
+total_affected = st.sidebar.slider("Total Affected", 0, 50000, 1000)
+duration = st.sidebar.slider("Duration (days)", 0, 30, 5)
+time = st.sidebar.slider("Time", 0, 24, 12)
+rainfall = st.sidebar.slider("Rainfall", 0, 500, 100)
+elevation = st.sidebar.slider("Elevation", 0, 500, 50)
+slope = st.sidebar.slider("Slope", 0, 20, 5)
+distance = st.sidebar.slider("Distance", 0, 50, 10)
 
-if st.button("Predict"):
-    input_data = np.array([[latitude, longitude, total_deaths, total_affected,
-                            duration, time, rainfall, elevation, slope, distance]])
+# Input array
+input_data = np.array([[latitude, longitude, total_deaths, total_affected,
+                        duration, time, rainfall, elevation, slope, distance]])
 
-    prediction = model.predict(input_data)
+# 🔹 Prediction Button
+if st.button("🚀 Predict Now"):
 
-    # Prediction result
-    if prediction[0] == 1:
-        st.error("⚠️ Disaster Likely to Occur")
+    prediction = model.predict(input_data)[0]
+    probability = model.predict_proba(input_data)[0][1]
+
+    # 🔥 Risk Level Logic
+    if probability > 0.7:
+        risk = "🔴 HIGH RISK"
+    elif probability > 0.4:
+        risk = "🟠 MEDIUM RISK"
     else:
-        st.success("✅ No Disaster Expected")
+        risk = "🟢 LOW RISK"
 
-    # 📊 GRAPH (Corrected)
-    st.subheader("📊 Input Feature Visualization")
+    # 🔹 Result Display
+    col1, col2 = st.columns(2)
 
-    values = [rainfall, elevation, slope, distance]
-    labels = ["Rainfall", "Elevation", "Slope", "Distance"]
+    with col1:
+        if prediction == 1:
+            st.error(f"⚠️ Disaster Likely ({risk})")
+        else:
+            st.success(f"✅ No Disaster Expected ({risk})")
 
-    fig, ax = plt.subplots()
-    ax.bar(labels, values)
-    ax.set_ylabel("Values")
+        st.metric("Prediction Probability", f"{probability*100:.2f}%")
 
-    st.pyplot(fig)
+    # 🔹 Graph Visualization
+    with col2:
+        st.subheader("📊 Feature Analysis")
+
+        features = ["Rainfall", "Elevation", "Slope", "Distance"]
+        values = [rainfall, elevation, slope, distance]
+
+        fig = px.bar(x=features, y=values, title="Environmental Factors")
+        st.plotly_chart(fig)
+
+    # 🔹 Map Visualization
+    st.subheader("🗺️ Location Map")
+
+    map_data = pd.DataFrame({
+        "lat": [latitude],
+        "lon": [longitude]
+    })
+
+    st.map(map_data)
+
+    # 🔹 Input Summary Table
+    st.subheader("📋 Input Summary")
+
+    df = pd.DataFrame(input_data, columns=[
+        "Latitude", "Longitude", "Deaths", "Affected",
+        "Duration", "Time", "Rainfall", "Elevation", "Slope", "Distance"
+    ])
+
+    st.dataframe(df)
+
+    # 🔹 Download Report
+    csv = df.to_csv(index=False)
+    st.download_button("⬇️ Download Input Data", csv, "report.csv")
