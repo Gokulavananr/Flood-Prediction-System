@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import pickle
 
 # Load dataset
@@ -11,21 +11,29 @@ print("Columns:", data.columns)
 # ❌ Drop text column
 data = data.drop("Disaster Type", axis=1)
 
-# 🎯 Target column
+# 🎯 Target column (classification)
 target_column = "occured"
 
-# Features & target
+# 🎯 Death target (regression)
+y_deaths = data["Total Deaths"]
+
+# Features & targets
 X = data.drop(target_column, axis=1)
 y = data[target_column]
 
-# Split
+# Split (use same indices for both models)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-# Model
-model = RandomForestClassifier()
+# 🔹 Classification model (Disaster Prediction)
+model = RandomForestClassifier(class_weight="balanced")
 model.fit(X_train, y_train)
 
-# Save model
-pickle.dump(model, open("model.pkl", "wb"))
+# 🔹 Regression model (Death Prediction)
+death_model = RandomForestRegressor()
+death_model.fit(X_train, y_deaths.loc[X_train.index])
 
-print("✅ Model trained successfully!")
+# Save models
+pickle.dump(model, open("model.pkl", "wb"))
+pickle.dump(death_model, open("death_model.pkl", "wb"))
+
+print("✅ Both models trained successfully!")
